@@ -1,19 +1,20 @@
 from producer_interface import mqProducerInterface
 import pika
 import os
+import sys
 
 class mqProducer(mqProducerInterface):
     def __init__(self, routing_key:str, exchange_name:str) -> None:
         self.routing_key = routing_key
         self.exchange_name = exchange_name
-        connection = self.setupRMQConnection()
+        self.setupRMQConnection()
 
     
     def setupRMQConnection(self) -> None:
         con_params = pika.URLParameters(os.environ["AMQP_URL"])
         self.connection = pika.BlockingConnection(parameters=con_params)
         self.channel = self.connection.channel()
-        message = "HI"
+        message = ' '.join(sys.argv[1:]) or 'Hello World!'
         self.publishOrder(message)
 
     def publishOrder(self, message: str) -> None:
@@ -22,8 +23,8 @@ class mqProducer(mqProducerInterface):
             routing_key= self.routing_key,
             body= message
         )
-        self.channel.close()
-        self.connection.close()
+        # self.channel.close()
+        # self.connection.close()
 
 '''
 setupRMQConnection Function: Establish connection to the RabbitMQ service.
