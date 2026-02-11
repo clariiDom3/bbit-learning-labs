@@ -8,15 +8,13 @@ class mqConsumer(mqConsumerInterface):
         self.binding_key = binding_key
         self.exchange_name = exchange_name
         self.queue_name = queue_name
-        self.connection = self.setupRMQConnection()
+        self.setupRMQConnection()
         
 
     def setupRMQConnection(self) -> None:
         # Set-up Connection to RabbitMQ service
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-        channel = connection.channel()
-
-
+        con_params = pika.URLParameters(os.environ["AMQP_URL"])
+        self.connection = pika.BlockingConnection(parameters=con_params)
         # Establish Channel
         self.channel = self.connection.channel()
         # Create Queue if not already present
@@ -30,7 +28,7 @@ class mqConsumer(mqConsumerInterface):
         self.channel.queue_bind(queue= self.queue_name, routing_key= self.binding_key, exchange=self.exchange_name)
 
         # Set-up Callback function for receiving messages
-        self.channel.basic_consume(self.queue_name, self.on_message_callback(self.channel,exchange, None, None), auto_ack=False)
+        self.channel.basic_consume(queue=self.queue_name, on_message_callback=self.on_message_callback, auto_ack=False)
         
 
     def on_message_callback(
@@ -54,15 +52,10 @@ class mqConsumer(mqConsumerInterface):
       
     
     def __del__(self) -> None:
-        # Print "Closing RMQ connection on destruction"
         print("Closing RMQ connection on destruction")
-
-        
-        # Close Channel
-        self.channel.close()
-
-
-        # Close Connection
-        self.connection.close()
-    
+        # Use getattr to avoid errors if setup failed mid-way
+        if hasattr(self, 'channel') and self.channel.is_open:
+            self.channel.close()
+        if hasattr(self, 'connection') and self.connection.is_open:
+            self.connection.close()
     
